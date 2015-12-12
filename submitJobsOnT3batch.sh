@@ -37,7 +37,7 @@ TOPWORKDIR=/scratch/`whoami`
 JOB_ID=$2
 
 # Basename of job sandbox (job workdir will be $TOPWORKDIR/$JOBDIR)
-JOBDIR=m$7-$2-${12}
+JOBDIR=m$7-$2-${12}-${8}
 ##################################################################
 
 
@@ -97,7 +97,7 @@ STARTDIR=`pwd`
 WORKDIR=$TOPWORKDIR/$JOBDIR
 RESULTDIR=$STARTDIR/$JOBDIR
 
-srmmkdir $USER_SRM_HOME/$HN_NAME/$SEUSERSUBDIR/$JOBDIR
+gfal-mkdir $USER_SRM_HOME/$HN_NAME/$SEUSERSUBDIR/$JOBDIR
 
 if test x"$SEUSERSUBDIR" = x; then
    SERESULTDIR=$USER_SRM_HOME/$HN_NAME/$JOBDIR
@@ -133,7 +133,7 @@ source $VO_CMS_SW_DIR/cmsset_default.sh
 #  our shared home
 scramv1 list > myout.txt 2>myerr.txt
 
-lcg-ls -b -D srmv2 -l srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/ >> myout.txt 2>>myerr.txt
+lcg-ls -b -D lv2 -l srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/ >> myout.txt 2>>myerr.txt
 
 # create a dummy file for copying back to the SE
 dd if=/dev/urandom of=mybigfile count=100 &>/dev/null
@@ -149,9 +149,9 @@ fi
 
 cd $WORKDIR
 
-combine $4 -M HybridNew --frequentist --clsAcc 0 -T ${10} -i ${11} --singlePoint $5 -s $6 --saveHybridResult --saveToys -m $7 -n $8> myout.txt 2>myerr.txt
+combine $4 -M HybridNew --frequentist --clsAcc 0 -T ${10} -i ${11} --singlePoint $5 -s $6 --saveHybridResult --saveToys -m $7 -n _$8_ > myout.txt 2>myerr.txt
 
-echo combine $4 -M HybridNew --frequentist --clsAcc 0 -T ${10} -i ${11} --singlePoint $5 -s $6 --saveHybridResult --saveToys -m $7 -n $8
+echo combine $4 -M HybridNew --frequentist --clsAcc 0 -T ${10} -i ${11} --singlePoint $5 -s $6 --saveHybridResult --saveToys -m $7 -n _$8_
 
 #### RETRIEVAL OF OUTPUT FILES AND CLEANING UP ############################
 cd $WORKDIR
@@ -191,7 +191,7 @@ if test x"$SEOUTFILES" != x; then
        if test ! -e $WORKDIR/$n; then
           echo "WARNING: Cannot find output file $WORKDIR/$n. Ignoring it" >&2
        else
-          lcg-cp $srmdebug -b -D srmv2 file:$WORKDIR/$n $SERESULTDIR/$n
+          gfal-copy file:$WORKDIR/$n $SERESULTDIR/$n
           if test $? -ne 0; then
              echo "ERROR: Failed to copy $WORKDIR/$n to $SERESULTDIR/$n" >&2
           fi
@@ -202,8 +202,8 @@ fi
 echo "Cleaning up $WORKDIR"
 rm -rf $WORKDIR
 
-cd /shome/jngadiub/EXOVVAnalysis/CMSSW_5_3_13/src/EXOVVNtuplizer/Ntuplizer
-mv $JOBDIR jobsOutput/
+#cd /shome/jngadiub/EXOVVAnalysis/CMSSW_5_3_13/src/EXOVVNtuplizer/Ntuplizer
+#mv $JOBDIR jobsOutput/
 
 ###########################################################################
 DATE_END=`date +%s`

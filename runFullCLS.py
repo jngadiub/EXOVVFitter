@@ -25,12 +25,13 @@ import time
 #$11: iterations
 #$12: subid
 
+### methods ###
 def get_canvas(text):
 
    tdrstyle.setTDRStyle()
-   CMS_lumi.lumi_8TeV = "19.7 fb^{-1}," + text
+   CMS_lumi.lumi_13TeV = "2.2 fb^{-1}," + text
    CMS_lumi.writeExtraText = 1
-   CMS_lumi.extraText = "Preliminary"
+   CMS_lumi.extraText = ""
 
    iPos = 0
    if( iPos==0 ): CMS_lumi.relPosX = 0.12
@@ -50,10 +51,10 @@ def get_canvas(text):
    canvas.SetBorderMode(0)
    canvas.SetFrameFillStyle(0)
    canvas.SetFrameBorderMode(0)
-   canvas.SetLeftMargin( L/W )
-   canvas.SetRightMargin( R/W )
+   canvas.SetLeftMargin( L/W+0.01 )
+   canvas.SetRightMargin( R/W+0.03 )
    canvas.SetTopMargin( T/H )
-   canvas.SetBottomMargin( B/H )
+   canvas.SetBottomMargin( B/H+0.03 )
    canvas.SetGrid()
    canvas.SetLogy()
    
@@ -74,7 +75,7 @@ def getAsymLimits(file):
         t_quantileExpected = t.quantileExpected
         t_limit = t.limit
         
-        #print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected
+        print "limit: ", t_limit, ", quantileExpected: ",t_quantileExpected
         
         if t_quantileExpected == -1.: lims[0] = t_limit
         elif t_quantileExpected >= 0.024 and t_quantileExpected <= 0.026: lims[1] = t_limit
@@ -86,64 +87,74 @@ def getAsymLimits(file):
     
     return lims
 
-def doLimitPlot( ):
+def doLimitPlot( suffix ):
+    
+    print "**********************************"
+    print suffix
+    xbins     = array('d', [])
+    xbins_env = array('d', [])
+    ybins_exp = array('d', [])
+    ybins_obs = array('d', [])
+    ybins_1s  = array('d', [])
+    ybins_2s  = array('d', [])
+    ybins_xs  = array('d', [])
 
     nPoints = len(mass)
+    br_lvjj = 2*0.322*0.6760
+    if options.signal.find('Wprime') != -1: br_lvjj = 0.322*0.6991
     
-    xbins        = array('d', [])
-    xbins_env    = array('d', [])
-    ybins_exp    = array('d', [])
-    ybins_obs    = array('d', [])
-    ybins_1s     = array('d', [])
-    ybins_2s     = array('d', [])
-    ybins_xs_HVT = array('d', [])
-    ybins_xs_LH  = array('d', [])
-    
-    br_lnubb = 0.1057*0.577
-    
-    if channel_ =="el" :
+    print br_lvjj
+    if TString(suffix).Contains("_el_") :
         text = "W#rightarrow e#nu"
-        br_lnubb = 0.1075*0.577
-    if channel_ =="mu" :
+    #    br_lvjj = 2*0.1075*0.6760
+    elif TString(suffix).Contains("_mu_") :
         text = "W#rightarrow #mu#nu"
-        br_lnubb = 0.1057*0.577
-    if channel_ =="em" :   
+    #    br_lvjj = 2*0.1057*0.6760
+    elif TString(suffix).Contains("_combo_") :    
         text = "W#rightarrow l#nu"
-        br_lnubb = 0.108*0.577
-    
+    #    br_lvjj = 2*0.108*0.6760
+	
+    if TString(suffix).Contains("HP"):
+        text+=" HP"
+    elif TString(suffix).Contains("LP") and not(TString(suffix).Contains("ALLP")):
+        text+=" LP"		
+    elif TString(suffix).Contains("ALLP"):
+        text+=" ALLP"	
+	        
+    signal = "G_{Bulk}"
+    xsDict = xsBulkG
+    if options.signal.find("RS1") != -1: 
+       signal = "G_{RS1}"
+       xsDict = xsRSG
+    if options.signal.find("Wprime") != -1: 
+       signal = "W'"
+       xsDict = xsWprime
     
     for i in range(len(mass)):
-        curFile = "m%i-fullCLS/higgsCombine_%s_.HybridNew.mH%i.root"%(mass[i],channel_,mass[i])
-        xsHVT = xsDict2[mass[i]]
-        xsLH  = xsDictLH[mass[i]]
-        curAsymLimits = getAsymLimits(curFile)
-        xbins.append( mass[i] )
-        xbins_env.append( mass[i] )
-        ybins_exp.append( curAsymLimits[3]*xsHVT )
-        ybins_obs.append( curAsymLimits[0]*xsHVT )
-        ybins_2s.append( curAsymLimits[1]*xsHVT )
-        ybins_1s.append( curAsymLimits[2]*xsHVT )
-	ybins_xs_HVT.append(xsHVT)
-        ybins_xs_LH.append(xsLH)
-	print "mass %i exp %.6f obs %.6f 2s %.6f 1s %.6f" %(mass[i],curAsymLimits[3],curAsymLimits[0],curAsymLimits[1],curAsymLimits[2])
+        curFile = "m%i-fullCLS-%s/higgsCombine_%s_.HybridNew.mH%i.all.root"%(mass[i],signal_,signal_,mass[i])
+        curAsymLimits = getAsymLimits(curFile);
+        xbins.append( mass[i] );
+        xbins_env.append( mass[i] );
+        ybins_exp.append( curAsymLimits[3]*0.01/br_lvjj );
+        ybins_obs.append( curAsymLimits[0]*0.01/br_lvjj );
+        ybins_2s.append( curAsymLimits[1]*0.01/br_lvjj );
+        ybins_1s.append( curAsymLimits[2]*0.01/br_lvjj );
+        ybins_xs.append(xsDict[mass[i]]);
     
     for i in range( len(mass)-1, -1, -1 ):
-        curFile = "m%i-fullCLS/higgsCombine_%s_.HybridNew.mH%i.root"%(mass[i],channel_,mass[i])
-        xsHVT = xsDict2[mass[i]]
-        xsLH  = xsDictLH[mass[i]]
-        curAsymLimits = getAsymLimits(curFile)
-        xbins_env.append( mass[i] )
-        ybins_2s.append( curAsymLimits[5]*xsHVT )
-        ybins_1s.append( curAsymLimits[4]*xsHVT )
-	print "mass %i exp %.6f obs %.6f 2s %.6f 1s %.6f" %(mass[i],curAsymLimits[3],curAsymLimits[0],curAsymLimits[5],curAsymLimits[4])
+        curFile = "m%i-fullCLS-%s/higgsCombine_%s_.HybridNew.mH%i.all.root"%(mass[i],signal_,signal_,mass[i])
+        curAsymLimits = getAsymLimits(curFile);
+        xbins_env.append( mass[i] );
+        ybins_2s.append( curAsymLimits[5]*0.01/br_lvjj );
+        ybins_1s.append( curAsymLimits[4]*0.01/br_lvjj );
+    
     
     canv = get_canvas(text)
     canv.cd()
         
     curGraph_exp    = ROOT.TGraphAsymmErrors(nPoints,xbins,ybins_exp)
     curGraph_obs    = ROOT.TGraphAsymmErrors(nPoints,xbins,ybins_obs)
-    curGraph_xs_HVT = ROOT.TGraph(nPoints,xbins,ybins_xs_HVT)
-    curGraph_xs_LH  = ROOT.TGraph(nPoints,xbins,ybins_xs_LH)
+    curGraph_xs     = ROOT.TGraph(nPoints,xbins,ybins_xs)
     curGraph_1s     = ROOT.TGraphAsymmErrors(nPoints*2,xbins_env,ybins_1s)
     curGraph_2s     = ROOT.TGraphAsymmErrors(nPoints*2,xbins_env,ybins_2s)
     
@@ -160,17 +171,11 @@ def doLimitPlot( ):
     curGraph_exp.SetMarkerStyle(24)
     curGraph_exp.SetMarkerColor(ROOT.kBlack)
 
-    curGraph_xs_HVT.SetLineStyle(ROOT.kSolid)
-    curGraph_xs_HVT.SetFillStyle(3344)
-    curGraph_xs_HVT.SetLineWidth(2)
-    curGraph_xs_HVT.SetMarkerSize(2)
-    curGraph_xs_HVT.SetLineColor(ROOT.kRed)
-
-    curGraph_xs_LH.SetLineStyle(ROOT.kSolid)
-    curGraph_xs_LH.SetFillStyle(3344)
-    curGraph_xs_LH.SetLineWidth(2)
-    curGraph_xs_LH.SetMarkerSize(2)
-    curGraph_xs_LH.SetLineColor(ROOT.kBlue)
+    curGraph_xs.SetLineStyle(ROOT.kSolid)
+    curGraph_xs.SetFillStyle(3344)
+    curGraph_xs.SetLineWidth(2)
+    curGraph_xs.SetMarkerSize(2)
+    curGraph_xs.SetLineColor(ROOT.kRed)
     
     curGraph_1s.SetFillColor(ROOT.kGreen)
     curGraph_1s.SetFillStyle(1001)
@@ -182,43 +187,79 @@ def doLimitPlot( ):
     curGraph_2s.SetLineStyle(ROOT.kDashed)
     curGraph_2s.SetLineWidth(3)
 
-    hrl_SM = canv.DrawFrame(750,10e-8, 3050, 10)
-    hrl_SM.GetYaxis().SetTitle("#sigma_{95%} #times BR(W' #rightarrow WH)(pb)")
+    hrl_SM = canv.DrawFrame(750,10e-8, 4050, 10)
+    ytitle = ""
+    print "suffix is %s" %(suffix)
+    if suffix.find("_el_") != -1:
+       ytitle = "#sigma_{95%} #times BR_{"+signal+"#rightarrow WW} (pb)"
+    if suffix.find("_mu_") != -1:
+       ytitle = "#sigma_{95%} #times BR_{"+signal+"#rightarrow WW} (pb)"
+    if suffix.find("_combo_") != -1:
+       ytitle = "#sigma_{95%} #times BR_{"+signal+"#rightarrow WW} (pb)"
+    if options.signal.find('Wprime') != -1: ytitle = ytitle.replace('WW','WZ')
+    hrl_SM.GetYaxis().SetTitle(ytitle)
     hrl_SM.GetYaxis().CenterTitle()
     hrl_SM.GetYaxis().SetTitleSize(0.06)
     hrl_SM.GetXaxis().SetTitleSize(0.06)
     hrl_SM.GetXaxis().SetLabelSize(0.045)
     hrl_SM.GetYaxis().SetLabelSize(0.045)
-    hrl_SM.GetYaxis().SetTitleOffset(0.9)
-    hrl_SM.GetXaxis().SetTitleOffset(0.9)
-    hrl_SM.GetXaxis().SetTitle("M_{W'} (GeV)")
+    hrl_SM.GetYaxis().SetTitleOffset(1)
+    hrl_SM.GetXaxis().SetTitleOffset(1.1)
+    hrl_SM.GetXaxis().SetTitle("M_{"+signal+"} (GeV)")
     hrl_SM.GetXaxis().CenterTitle()
-    hrl_SM.SetMinimum(0.001)
-    hrl_SM.SetMaximum(10)
+    hrl_SM.SetMinimum(0.0001)
+    if options.signal.find('Wprime') != -1: hrl_SM.SetMinimum(0.001)
+    hrl_SM.SetMaximum(100)
     hrl_SM.GetYaxis().SetNdivisions(505)
         
     curGraph_2s.Draw("F")
     curGraph_1s.Draw("Fsame")
     curGraph_exp.Draw("Lsame")
     curGraph_obs.Draw("LPsame")
-    curGraph_xs_HVT.Draw("Csame")
-    curGraph_xs_LH.Draw("Csame")
+    curGraph_xs.Draw("Csame")
+
+    pt = ROOT.TPaveText(0.6595477,0.222028,0.8944724,0.3653846,"NDC")
+    pt.SetBorderSize(0)
+    pt.SetFillStyle(0)
+    pt.SetTextFont(62)
+    pt.SetTextSize(0.038)
+    pt.SetTextAlign(31)
+    pt.SetFillColor(0)
+    
+    if TString(suffix).Contains("W"):
+     text = pt.AddText("WW category")
+    if TString(suffix).Contains("Z"):
+     text = pt.AddText("WZ category")
+    if not(TString(suffix).Contains("Z")) and not(TString(suffix).Contains("W")): 
+     text = pt.AddText("WW+WZ categories combined")
+    #text.SetTextFont(62)
+    if TString(suffix).Contains("HP"):
+     text = pt.AddText("#tau_{21} < 0.6")
+    if TString(suffix).Contains("LP") and not(TString(suffix).Contains("ALLP")):
+     text = pt.AddText("0.6 < #tau_{21} < 0.75")
+    #text.SetTextFont(62)
        
-    leg2 = ROOT.TLegend(0.52,0.68,0.93,0.88)
+    leg2 = ROOT.TLegend(0.4334171,0.6695804,0.9183417,0.8706294)
+    leg2.SetLineWidth(2)
     leg2.SetBorderSize(0)
     leg2.SetFillStyle(0)
-    leg2.SetTextSize(0.03)
+    leg2.SetTextFont(42)
+    leg2.SetTextSize(0.038)
+    leg2.SetTextAlign(12)
 
     leg2.AddEntry(curGraph_1s,"Asympt. CL_{S}  Expected #pm 1#sigma","LF")
     leg2.AddEntry(curGraph_2s,"Asympt. CL_{S}  Expected #pm 2#sigma","LF")
-    leg2.AddEntry(curGraph_xs_HVT,"HVT B(gv=3)","L")
-    leg2.AddEntry(curGraph_xs_LH,"Little Higgs","L")
-     
+    theoleg = "#sigma_{TH} #times BR_{"+signal+"#rightarrow WW}"
+    if options.signal.find('Wprime') != -1: theoleg = theoleg.replace('WW','WZ')
+    if options.signal.find('Bulk') != -1: theoleg+=" #tilde{k}=0.5"
+    if options.signal.find('Wprime') != -1: theoleg+=" , HVT_{B}"
+    leg2.AddEntry(curGraph_xs,theoleg,"L")     
     leg2.Draw()
+    pt.Draw()
              
     canv.Update()   
     canv.cd()
-    CMS_lumi.CMS_lumi(canv, 2, 0)	   
+    CMS_lumi.CMS_lumi(canv, 4, 0)	   
     canv.cd()
     canv.Update()
     canv.RedrawAxis()
@@ -228,15 +269,12 @@ def doLimitPlot( ):
     canv.cd()
     canv.Update()    
     
-    time.sleep(1000)
-    
     os.system('mkdir LimitResult')
-    os.system('mkdir LimitResult/Limit_ExpTail')
     
-    canv.SaveAs("./LimitResult/Limit_ExpTail/Lim%s.png"%(channel_))
-    canv.SaveAs("./LimitResult/Limit_ExpTail/Lim%s.pdf"%(channel_))
-    canv.SaveAs("./LimitResult/Limit_ExpTail/Lim%s.root"%(channel_))
-    canv.SaveAs("./LimitResult/Limit_ExpTail/Lim%s.C"%(channel_))
+    canv.SaveAs("./LimitResult/Lim%s%s.png"%(suffix,options.signal))
+    canv.SaveAs("./LimitResult/Lim%s%s.pdf"%(suffix,options.signal))
+    canv.SaveAs("./LimitResult/Lim%s%s.root"%(suffix,options.signal))
+    canv.SaveAs("./LimitResult/Lim%s%s.C"%(suffix,options.signal))
        
 parser = OptionParser()
 parser.add_option("--outdir", dest="outdir", action="store",
@@ -251,6 +289,7 @@ parser.add_option("--datadir", dest="datadir", action="store",
 parser.add_option("--channel", dest="channel", action="store",
                   help="channel (el,mu,combo)", metavar="CHANNEL", type="string", 
                   default="")
+parser.add_option('--signal', action="store",type="string",dest="signal",default="BulkG_WW")
 parser.add_option("--toys", dest="toys", action="store",
                   help="number of toys", metavar="TOYS", type="int", 
                   default=1)
@@ -278,6 +317,7 @@ datadir_ = options.datadir
 channel_ = options.channel
 toys_ = options.toys
 it_ = options.iterations
+signal_ = options.signal
 
 points = []		  
 for p in range(1,10):
@@ -288,22 +328,17 @@ for p in range(1,10):
    points+=[float(p*10.)]
    points+=[float(p*10.+5.)]
 
-mass = [1900]
 #mass = [800,900,1000,1100,1200,1300,1400,1500,1600,1700,1800,1900,2000,2100,2200,2300,2400,2500]
+#mass = [1000,2000,3000,4000]
+mass = [1000,2000,3000]
 
-xsDict2 = {800:0.337368865,900:0.248172934,
-          1000:0.170538599,1100:0.115925052,1200:0.080506243,1300:0.055909013,
-          1400:0.038827022,1500:0.025069330,1600:0.018725724,1700:0.013004416,
-          1800:0.009031152,1900:0.006271846,2000:0.004251021,2100:0.003024823,
-	  2200:0.002100643,2300:0.001458829, 2400:0.001013110, 2500:0.000731277,
-          2600:0.000488609,2700:0.000339323,2800:0.000235649,2900:0.000163651,3000:0.000120961}
+xsBulkG = {800:0.076058293365,1000:0.0204996927419,1200:0.00683956014339,1400:0.00261374040791,1600:0.0011483744,1800:0.0004882930,
+           2000:0.000239518814875,2500:4.48570778809e-05,3000:9.82486087113e-06,3500:41.9758278604e-07,4000:24.3824379692e-07,
+     	   4500:20.8967256514e-07}
 
-xsDictLH = {800:0.5087,900:0.3026,
-            1000:0.1866,1100:0.1181,1200:0.07653,1300:0.05061,
-            1400:0.03386,1500:0.0229,1600:0.01562,1700:0.01075,
-            1800:0.007426,1900:0.005172,2000:0.003612,2100:0.002527,
-            2200:0.001763,2300:0.001237,2400:0.000867,2500:0.0006071,
-            2600:0.0004247,2700:0.0002964,2800:0.0002069,2900:0.0001438,3000:0.00009972} 
+xsWprime = {800:1.587885*0.428731, 1000:0.986533*0.460359, 1200:0.535394*0.467605, 1400:0.2955239*0.470248, 1600:0.1681478*0.471413,
+            1800:0.0984325*0.471991, 2000:0.058998*0.472301, 2500:0.01771031*0.472619, 3000:0.00567529*0.472715, 3500:0.001878491*0.472748,
+	    4000:6.0983956656e-08*0.472759,4500:168.1479623273e-07}
 	  
 if options.runtoys:
 
@@ -312,11 +347,11 @@ if options.runtoys:
       for p in range(len(points)):
 
          point = points[p]
-	 for i in range(10):
+	 for i in range(1): #range(10)
             seed = int(random.random()*pow(10,7))
-            outfile = "higgsCombine_%s_.HybridNew.mH%i.%i.root" %(channel_,m,seed)
-            datacard = "%s/cards_EXO_%s_ALLP_g1/whlvj_MWp_%i_bb_%s_ALLP_unbin.txt" %(datadir_,channel_,m,channel_)
-            cmd = "qsub -q all.q submitJobsOnT3batch.sh %s %s %s %s %f %i %i _%s_ %s %i %i %i" %(outfile,p,cmsswdir_,datacard,point,seed,m,channel_,outdir_,toys_,it_,i)
+            outfile = "higgsCombine_%s_.HybridNew.mH%i.%i.root" %(signal_,m,seed)
+            datacard = "%s/wwlvj_%s_lvjj_M%i_combo_ALLP_unbin.txt" %(datadir_,signal_,m)
+            cmd = "qsub -q all.q submitJobsOnT3batch.sh %s %s %s %s %f %i %i %s %s %i %i %i" %(outfile,p,cmsswdir_,datacard,point,seed,m,signal_,outdir_,toys_,it_,i)
             print cmd
             os.system(cmd)
 
@@ -327,18 +362,18 @@ if options.mergefiles:
    
    for m in mass: 
         
-      status,ls_la = commands.getstatusoutput( 'ls -l m%i-fullCLS'%(m) )  													      
+      status,ls_la = commands.getstatusoutput( 'ls -l m%i-fullCLS-%s'%(m,signal_) )  													      
       if status:																				      
-         os.system('mkdir m%i-fullCLS'%(m) )
+         os.system('mkdir m%i-fullCLS-%s'%(m,signal_) )
       #else:
          #os.system('rm -rf m%i-fullCLS'%(m) )
 	 #os.system('mkdir m%i-fullCLS'%(m) )	 
       
-      for p in xrange(45,len(points)):
+      for p in range(len(points)):#xrange(45,len(points)):
       
-         for i in range(10):
+         for i in range(1): #range(10)
             outdir = "jobtmp"
-            cmd = "uberftp t3se01.psi.ch 'ls /pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i'" %(user,outdir_,m,p,i)
+            cmd = "uberftp t3se01.psi.ch 'ls /pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i-%s'" %(user,outdir_,m,p,i,signal_)
             status,ls_la = commands.getstatusoutput( cmd )
             filename = ''
             list_ = ls_la.split(os.linesep)
@@ -348,56 +383,64 @@ if options.mergefiles:
               if b[-1:][0].find("root") != -1:
             	 filename = b[len(b)-1].split('\r')[0]
        
-            cmd = "lcg-cp -bD srmv2 srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i/%s m%i-fullCLS/%s" %(user,outdir_,m,p,i,filename,m,filename) 
-            #print cmd
-	    #os.system(cmd)
-	    cmd = "srmrm srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i/%s" %(user,outdir_,m,p,i,filename)
+            cmd = "lcg-cp -bD srmv2 srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i-%s/%s m%i-fullCLS-%s/%s" %(user,outdir_,m,p,i,signal_,filename,m,signal_,filename) 
+            print cmd
+	    os.system(cmd)
+	    cmd = "gfal-rm srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i-%s/%s" %(user,outdir_,m,p,i,signal_,filename)
 	    print cmd
 	    os.system(cmd)
-	    cmd = "srmrmdir srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i/" %(user,outdir_,m,p,i)
+	    cmd = "lcg-del -d srm://t3se01.psi.ch:8443/srm/managerv2?SFN=/pnfs/psi.ch/cms/trivcat/store/user/%s/%s/m%i-%i-%i-%s/" %(user,outdir_,m,p,i,signal_)
             print cmd
 	    os.system(cmd)
 	    
-         hadd = "hadd -f m%i-fullCLS/grid_mX%i_p%i_%s.root m%i-fullCLS/higgsCombine*" %(m,m,p,channel_,m)
-         #print hadd
-         #os.system(hadd)
-	 rm = "rm m%i-fullCLS/higgsCombine*" %(m)
-         #print rm
-	 #os.system(rm)
+         hadd = "hadd -f m%i-fullCLS-%s/grid_mX%i_p%i_%s.root m%i-fullCLS-%s/higgsCombine*" %(m,signal_,m,p,signal_,m,signal_)
+         print hadd
+         os.system(hadd)
+	 rm = "rm m%i-fullCLS-%s/higgsCombine*" %(m,signal_)
+         print rm
+	 os.system(rm)
 	    
-      hadd = "hadd -f m%i-fullCLS/grid_mX%i_%s.root m%i-fullCLS/grid_mX*" %(m,m,channel_,m)
-      #print hadd
-      #os.system(hadd)
+      hadd = "hadd -f m%i-fullCLS-%s/grid_mX%i_%s.root m%i-fullCLS-%s/grid_mX*" %(m,signal_,m,signal_,m,signal_)
+      print hadd
+      os.system(hadd)
 
 if options.runfullcls:
 
    for m in mass:
    
-      datacard = "%s/cards_EXO_%s_ALLP_g1/whlvj_MWp_%i_bb_%s_ALLP_unbin.txt" %(datadir_,channel_,m,channel_)
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_" %(datacard,m,m,channel_,m,channel_)
+      datacard = "%s/wwlvj_%s_lvjj_M%i_combo_ALLP_unbin.txt" %(datadir_,signal_,m)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.5" %(datacard,m,m,channel_,m,channel_)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.5" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.16" %(datacard,m,m,channel_,m,channel_)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.16" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.84" %(datacard,m,m,channel_,m,channel_)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.84" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)                  
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.025" %(datacard,m,m,channel_,m,channel_)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.025" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)
-      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.975" %(datacard,m,m,channel_,m,channel_)
+      cmd = "combine %s -M HybridNew --testStat LHC --grid m%i-fullCLS-%s/grid_mX%i_%s.root -m %i -n _%s_ --expectedFromGrid 0.975" %(datacard,m,signal_,m,signal_,m,signal_)
       print cmd
       os.system(cmd)
       
+      cmd = "mv higgsCombine* m%i-fullCLS-%s/."%(m,signal_)
+      print cmd
+      os.system(cmd)
+
+      cmd = "hadd m%i-fullCLS-%s/higgsCombine_%s_.HybridNew.mH%i.all.root m%i-fullCLS-%s/higgsCombine*"%(m,signal_,signal_,m,m,signal_)
+      print cmd
+      os.system(cmd)
+            
 if options.plotlimits:
 
-   doLimitPlot()      
+   doLimitPlot("_combo_ALLP_")      
       
-#python runFullCLS.py --channel el --cmsswdir /shome/jngadiub/CMSSW_6_1_1 --datadir /shome/jngadiub/CMSSW_6_1_1/src/HiggsAnalysis/CombinedLimit --outdir jobtmp --runtoys --toys 1 --i 3
-#python runFullCLS.py --channel el --outdir jobtmp --merge
-#python runFullCLS.py --channel el --datadir /shome/jngadiub/CMSSW_6_1_1/src/HiggsAnalysis/CombinedLimit --runfullcls
-#python runFullCLS.py --channel el --plotlimits
+#python runFullCLS.py --channel combo --signal BulkG_WW --cmsswdir /shome/jngadiub/EXOVVAnalysisRunII/CMSSW_7_1_5 --datadir /shome/jngadiub/EXOVVAnalysisRunII/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/13TeV_datacards_Spring15/cards_BulkG_unblind/ --outdir jobtmp --runtoys --toys 100 --i 30
+#python runFullCLS.py --channel combo --outdir jobtmp --merge
+#python runFullCLS.py --channel combo --datadir /shome/jngadiub/EXOVVAnalysisRunII/CMSSW_7_1_5/src/HiggsAnalysis/CombinedLimit/13TeV_datacards_Spring15/cards_BulkG_unblind/ --runfullcls
+#python runFullCLS.py --channel combo --plotlimits
